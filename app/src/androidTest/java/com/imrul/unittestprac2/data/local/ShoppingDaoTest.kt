@@ -79,10 +79,6 @@ class ShoppingDaoTest {
         assertThat(allShoppingItems).isEmpty()
     }
 
-
-
-
-
     @Test
     fun observeTotalPriceSumTest() = runTest {
         val shoppingItem1 = ShoppingItem("banana", 5, 8f, "url", id = 1)
@@ -94,14 +90,14 @@ class ShoppingDaoTest {
         dao.insertShoppingItem(shoppingItem3)
         dao.insertShoppingItem(shoppingItem4)
 
-        var totalPrice: Float? = null
 
+        //get the flow from the database
+        var totalPrice: Float? = null
         val job = launch {
             dao.observeTotalPrice().collect {
                 totalPrice = it
             }
         }
-
         testScheduler.apply { advanceTimeBy(1000); runCurrent() }
         job.cancelAndJoin()
 
