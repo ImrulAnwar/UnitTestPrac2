@@ -6,8 +6,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
-import com.imrul.unittestprac2.getOrAwaitValue
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -17,6 +18,8 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
+@OptIn(ExperimentalCoroutinesApi::class)
+
 class ShoppingDaoTest {
 
     //to make sure they run sequentially
@@ -44,10 +47,18 @@ class ShoppingDaoTest {
     fun insertShoppingItemTest() = runTest {
         val shoppingItem = ShoppingItem("banana", 5, 8f, "url", id = 1)
         dao.insertShoppingItem(shoppingItem)
-
-        val allShoppingItems = dao.observeAllShoppingItems().getOrAwaitValue()
-
-        assertThat(allShoppingItems.contains(shoppingItem))
+        var allShoppingItems: List<ShoppingItem>? = null
+        // Launch a coroutine job and store the reference to it
+        val job = launch {
+            dao.observeAllShoppingItems().collect {
+                allShoppingItems = it
+            }
+        }
+        // Explicitly advance time to wait for the job to complete
+        testScheduler.apply { advanceTimeBy(1000); runCurrent() } // Adjust the time as needed
+        // Cancel the job to ensure proper cleanup
+        job.cancelAndJoin()
+        assertThat(allShoppingItems?.contains(shoppingItem))
     }
 
     @Test
@@ -55,9 +66,22 @@ class ShoppingDaoTest {
         val shoppingItem = ShoppingItem("banana", 5, 8f, "url", id = 1)
         dao.insertShoppingItem(shoppingItem)
         dao.deleteShoppingItem(shoppingItem)
-        val allShoppingItems = dao.observeAllShoppingItems().getOrAwaitValue()
-        assertThat(allShoppingItems.isEmpty())
+
+        var allShoppingItems: List<ShoppingItem>? = null
+        val job = launch {
+            dao.observeAllShoppingItems().collect {
+                allShoppingItems = it
+            }
+        }
+        testScheduler.apply { advanceTimeBy(1000); runCurrent() }
+        job.cancelAndJoin()
+
+        assertThat(allShoppingItems).isEmpty()
     }
+
+
+
+
 
     @Test
     fun observeTotalPriceSumTest() = runTest {
@@ -70,9 +94,23 @@ class ShoppingDaoTest {
         dao.insertShoppingItem(shoppingItem3)
         dao.insertShoppingItem(shoppingItem4)
 
-        val totalPrice = dao.observeTotalPrice().getOrAwaitValue()
-        assertThat(totalPrice).isEqualTo(160)
+        var totalPrice: Float? = null
+
+        val job = launch {
+            dao.observeTotalPrice().collect {
+                totalPrice = it
+            }
+        }
+
+        testScheduler.apply { advanceTimeBy(1000); runCurrent() }
+        job.cancelAndJoin()
+
+        assertThat(totalPrice).isEqualTo(160f)
     }
 
 
+
+
+
 }
+

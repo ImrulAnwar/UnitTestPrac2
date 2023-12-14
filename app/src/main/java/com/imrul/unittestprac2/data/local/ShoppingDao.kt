@@ -6,6 +6,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ShoppingDao {
@@ -16,8 +17,8 @@ interface ShoppingDao {
     suspend fun deleteShoppingItem(shoppingItem: ShoppingItem)
 
     @Query("SELECT * FROM shopping_items")
-    fun observeAllShoppingItems(): LiveData<List<ShoppingItem>>
+    fun observeAllShoppingItems(): Flow<List<ShoppingItem>>
 
     @Query("SELECT SUM(price * amount) FROM shopping_items")
-    fun observeTotalPrice(): LiveData<Float>
+    fun observeTotalPrice(): Flow<Float>
 }
